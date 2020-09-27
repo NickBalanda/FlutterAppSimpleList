@@ -1,4 +1,4 @@
-package com.balanda.shopping_list;
+package com.balanda.simple_list;
 
 import io.flutter.embedding.android.FlutterActivity;
 

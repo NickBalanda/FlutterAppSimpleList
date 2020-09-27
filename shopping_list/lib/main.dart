@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:awesome_dialog/awesome_dialog.dart';
 
 void main() => runApp(new ListApp());
 
@@ -9,7 +7,7 @@ class ListApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
-      title: 'Items List',
+      title: 'Simple List',
 
       home: new ShoppingList()
     );
@@ -32,6 +30,8 @@ class ShoppingListState extends State<ShoppingList> {
   bool itemsLoaded = false;
   bool allItemsChecked = false;
 
+  TextEditingController _writeController = TextEditingController();
+
   @override
   void initState(){
     super.initState();
@@ -40,7 +40,7 @@ class ShoppingListState extends State<ShoppingList> {
   }
 
   void  _getFromSharedPref() async{
-    print(itemsLoaded);
+    //print(itemsLoaded);
     final prefs = await SharedPreferences.getInstance();
 
     final savedItems = prefs.getStringList("_shoppingItems");
@@ -59,7 +59,7 @@ class ShoppingListState extends State<ShoppingList> {
       });
     }
     itemsLoaded = true;
-    print(itemsLoaded);
+    //print(itemsLoaded);
   }
   void _saveToSharedPref() async{
     final prefs = await SharedPreferences.getInstance();
@@ -76,6 +76,7 @@ class ShoppingListState extends State<ShoppingList> {
 
   }
 
+
   bool toBoolean(String str, [bool strict]) {
     if (strict == true) {
       return str == '1' || str == 'true';
@@ -90,7 +91,7 @@ class ShoppingListState extends State<ShoppingList> {
   }
 
   // Items management
-  void _addShoppingItem(String item) {
+  void _addItem(String item) {
     // Only add the task if the user actually entered something
     if(item.length > 0) {
       setState(() {
@@ -102,7 +103,7 @@ class ShoppingListState extends State<ShoppingList> {
     }
   }
 
-  void _removeShoppingItem(int index) {
+  void _removeItem(int index) {
     setState(() {
       _shoppingItems.removeAt(index);
 
@@ -110,31 +111,41 @@ class ShoppingListState extends State<ShoppingList> {
       _checkedItemsString.removeAt(index);
     });
   }
- void _removeAllSelectedItems(){
-    for(int i = 0; i < _checkedItems.length; i++){
-      if(_checkedItems[i] == true){
-        print(_shoppingItems[i]);
-        _removeShoppingItem(i);
-      }
-    }
-    _getFromSharedPref();
+  void _editItem(int index, String newItem) {
+    setState(() {
+      _shoppingItems[index] = newItem;
+    });
+  }
+ void _removeAllItems(){
+   setState(() {
+     _shoppingItems.clear();
+     _checkedItems.clear();
+     _checkedItemsString.clear();
+   });
+   _removeSharedPref();
  }
- //Show dialog to remove all selected items
-  /*void _promptRemoveAllSelectedItems() {
+
+  void _promptRemoveAllItems() {
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return new AlertDialog(
-              title: new Text('Delete selected items?'),
+              title: new Text('Delete all items from the list?'),
               actions: <Widget>[
                 new FlatButton(
-                    child: new Text('CANCEL'),
+                    child: new Text('CANCEL',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),),
                     onPressed: () => Navigator.of(context).pop()
                 ),
                 new FlatButton(
-                    child: new Text('DELETE'),
+                    child: new Text('DELETE',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),),
                     onPressed: () {
-                      _removeAllSelectedItems();
+                      _removeAllItems();
                       Navigator.of(context).pop();
                     }
                 )
@@ -142,24 +153,152 @@ class ShoppingListState extends State<ShoppingList> {
           );
         }
     );
-  }*/
+  }
 
-// Show an alert dialog asking the user to confirm that the task is done
-  void _promptRemoveShoppingItem(int index) {
+  void _promptAddItem() {
+    //_writeController.value..text = '';
+
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return new AlertDialog(
-              title: new Text('Delete "${_shoppingItems[index]}" ?'),
+              title: new Text('Add a new item'),
+              backgroundColor: Colors.amber[50],
+
+              content: TextField(
+                controller: _writeController,
+                autofocus: true,
+                cursorColor: Colors.grey[600],
+                onSubmitted: (val) {
+                  _addItem(val);
+                  _writeController.clear();
+                  Navigator.pop(context); // Close the add shopping screen
+                },
+                decoration: InputDecoration(
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey[600]),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey[600]),
+                  ),
+                  hintText: 'Enter a new item...',
+                ),
+
+              ),
               actions: <Widget>[
                 new FlatButton(
-                    child: new Text('CANCEL'),
+                    child: new Text(
+                      'CANCEL',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
                     onPressed: () => Navigator.of(context).pop()
                 ),
                 new FlatButton(
-                    child: new Text('DELETE'),
+                    child: new Text(
+                      'OK',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
                     onPressed: () {
-                      _removeShoppingItem(index);
+                      _addItem(_writeController.value.text);
+                      _writeController.clear();
+                      Navigator.of(context).pop();
+                    }
+                )
+              ]
+          );
+
+        }
+    );
+  }
+
+  void _promptEditItem(int index) {
+    _writeController.text = '${_shoppingItems[index]}';
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return new AlertDialog(
+              title: new Text('Edit Item'),
+              backgroundColor: Colors.amber[50],
+
+              content: TextField(
+                controller: _writeController,
+                autofocus: true,
+                cursorColor: Colors.grey[600],
+                onSubmitted: (val) {
+                  _editItem(index, _writeController.value.text);
+                  Navigator.pop(context); // Close the add shopping screen
+                },
+                decoration: InputDecoration(
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey[600]),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey[600]),
+                  ),
+
+                ),
+
+              ),
+              actions: <Widget>[
+                new FlatButton(
+                    child: new Text(
+                      'CANCEL',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).pop()
+                ),
+                new FlatButton(
+                    child: new Text(
+                        'APPLY',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    onPressed: () {
+                      _editItem(index, _writeController.value.text);
+                      _writeController.text = '';
+                      Navigator.of(context).pop();
+                    }
+                )
+              ]
+          );
+
+        }
+    );
+  }
+
+  void _promptRemoveItem(int index) {
+        showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return new AlertDialog(
+              title: new Text('Delete "${_shoppingItems[index]}" ?'),
+              backgroundColor: Colors.amber[50],
+              actions: <Widget>[
+                new FlatButton(
+                    child: new Text(
+                      'CANCEL',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).pop()
+                ),
+                new FlatButton(
+                    child: new Text(
+                      'DELETE',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    onPressed: () {
+                      _removeItem(index);
                       Navigator.of(context).pop();
                     }
                 )
@@ -172,20 +311,20 @@ class ShoppingListState extends State<ShoppingList> {
   }
 
   // Build the whole list of shopping items
-  Widget _buildShoppingList() {
+  Widget _buildList() {
     return new ListView.builder(
       // ignore: missing_return
       itemBuilder: (context, index) {
         if(index < _shoppingItems.length) {
           _saveToSharedPref();
-          return _buildShoppingItem(_shoppingItems[index],index);
+          return _buildItem(_shoppingItems[index],index);
         }
       },
     );
   }
 
   // Build a single shopping item
-  Widget _buildShoppingItem(String itemText, int index) {
+  Widget _buildItem(String itemText, int index) {
 
     return new ListTile(
         leading: Checkbox(
@@ -203,11 +342,22 @@ class ShoppingListState extends State<ShoppingList> {
           },
 
         ),
-        trailing: IconButton(
-          icon: _deleteIconColor(_checkedItems[index]),
-          onPressed: () {
-            _promptRemoveShoppingItem(index);
-          },
+        trailing: Wrap(
+          spacing: 12, // space between two icons
+          children: <Widget>[
+            IconButton(
+              icon: _editIconColor(_checkedItems[index]),
+              onPressed: () {
+                _promptEditItem(index);
+              },
+            ),//
+            IconButton(
+              icon: _deleteIconColor(_checkedItems[index]),
+              onPressed: () {
+                _promptRemoveItem(index);
+              },
+            ), // icon-1
+          ],
         ),
 
         title: _itemText(itemText, _checkedItems[index]),
@@ -215,6 +365,12 @@ class ShoppingListState extends State<ShoppingList> {
 
   }
 
+  Widget _editIconColor(bool check){
+    if(!check)
+      return new Icon(Icons.edit);
+    else
+      return new Icon(Icons.edit, color: Colors.redAccent);
+  }
   Widget _deleteIconColor(bool check){
     if(!check)
       return new Icon(Icons.delete);
@@ -228,7 +384,7 @@ class ShoppingListState extends State<ShoppingList> {
       return new Text(item);
   }
 
-  void _pushAddShoppingItemScreen() {
+ /* void _pushAddShoppingItemScreen() {
     // Push this page onto the stack
     Navigator.of(context).push(
       // MaterialPageRoute will automatically animate the screen entry, as well
@@ -251,7 +407,7 @@ class ShoppingListState extends State<ShoppingList> {
                     autofocus: true,
                     cursorColor: Colors.grey[600],
                     onSubmitted: (val) {
-                      _addShoppingItem(val);
+                      _addItem(val);
                       Navigator.pop(context); // Close the add shopping screen
                     },
                     decoration: new InputDecoration(
@@ -265,7 +421,7 @@ class ShoppingListState extends State<ShoppingList> {
         )
     );
   }
-
+*/
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
@@ -273,7 +429,7 @@ class ShoppingListState extends State<ShoppingList> {
         appBar: new AppBar(
 
           title: new Text(
-            'Items List',
+            'Simple List',
             style: TextStyle(
               color: Colors.grey[600],
             ),),
@@ -292,23 +448,22 @@ class ShoppingListState extends State<ShoppingList> {
                     });
                   }),
           ),
-
+          */
           actions: <Widget>[
             IconButton(
               icon: Icon(
                 Icons.delete_outline,
-                color: Colors.white,
+                color: Colors.grey[600],
               ),
               onPressed: () {
-                //_promptRemoveAllSelectedItems();
+                _promptRemoveAllItems();
               },
             ),
 
           ],
 
-           */
         ),
-        body: _buildShoppingList(),
+        body: _buildList(),
         bottomNavigationBar: BottomAppBar(
           //shape: const CircularNotchedRectangle(),
           child: Container(
@@ -317,7 +472,7 @@ class ShoppingListState extends State<ShoppingList> {
           color: Colors.amber[50],
         ),
         floatingActionButton: new FloatingActionButton.extended(
-          onPressed: _pushAddShoppingItemScreen,
+          onPressed: _promptAddItem,
           tooltip: 'Add item',
           label: Text(
             'Add Item',
